@@ -7,7 +7,7 @@ public class TemplatePackSettings implements PackSettings {
 
     @Override
     public void createSettings(SettingsManager manager, SettingsScreen screen) {
-        screen.option("shadows", OptionType.boolType(), false);
+        screen.option("shadows", OptionType.boolType(false), false);
     }
     
 }

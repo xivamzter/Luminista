@@ -12,13 +12,17 @@ public class TemplatePack implements ShaderPack {
     public void configurePipeline(Screen screen, PipelineConfig pipeline) {
         pipeline.combinationPass("post/combination");
 
-        var mainTexture = pipeline.texture2D("mainTexture", TextureFormat.RGBA8_UNORM).renderSize().create();
+        var mainTexture = pipeline.texture2D("mainTexture", TextureFormat.RGBA16_UNORM).renderSize().create();
 
-        if (pipeline.getSettings().getBoolValue("shadows")) pipeline.object(ProgramUsage.SHADOW, "object/shadow", "ShadowShader");
+        if (pipeline.getSettings().getBoolValue("shadows"))
+        pipeline.object(ProgramUsage.SHADOW, "object/shadow", "ShadowShader");
+        pipeline.object(ProgramUsage.SKYBOX, "object/skybox", "BasicShader");
         pipeline.object(ProgramUsage.BASIC, "object/basic", "BasicShader").writes("color", mainTexture).exportInt("CASCADE_COUNT", CASCADE_COUNT);
         pipeline.object(ProgramUsage.TRANSLUCENT, "object/basic", "BasicShader").writes("color", mainTexture).exportInt("CASCADE_COUNT", CASCADE_COUNT);
 
-        pipeline.stage(ProgramStage.PRE_RENDER).clearToFogColor(mainTexture);
+        pipeline.stage(ProgramStage.PRE_RENDER).clearTo(new Vector4f(0.0f),mainTexture);
+
+        pipeline.stage(ProgramStage.POST_RENDER).composite("sky", "post/sky", "applySky").writes("color", mainTexture);
     }
 
     @Override

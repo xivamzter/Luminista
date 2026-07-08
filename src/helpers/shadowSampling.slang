@@ -19,7 +19,7 @@ static bool projectShadow(float4 lightView, uint cascade, out float2 uv, out flo
     return all(shadowPos >= 0.0 && shadowPos <= 1.0);
 }
 
-static float shadowVisibility(float3 worldRelative) {
+static float shadowVisibility1(float3 worldRelative) {
     uint cascadeCount = min(CASCADE_COUNT, max(1u, ap.celestial.cascadeCount));
     float4 lightView = mul(ap.celestial.view, float4(worldRelative, 1.0));
 
@@ -27,7 +27,6 @@ static float shadowVisibility(float3 worldRelative) {
     float depth;
     for (uint cascade = 0; cascade < CASCADE_COUNT; cascade++) {
         if (projectShadow(lightView, cascade, uv, depth)) {
-            ap.shadow.sampleLinear(uv, int(cascade));
             return ap.opaqueShadow.compare(uv, int(cascade), depth - 0.0005);
         }
     }
