@@ -210,6 +210,21 @@ bool getDistances(in float2 atmosLayerTop, in float2 atmosLayerBottom, out float
     return true;
 }
 
+public float3 computeIntegratedSingleScatteringForCelestialLight(MediumSample mediumSample, float lightRayleighPhase, float lightMiePhase, float3 rayPos, float3 lightDir, float3 sampleTransmittance, float lightIlluminance) {
+
+    float3 phaseTimesMediumScattering = mediumSample.rayleighScattering * lightRayleighPhase + mediumSample.mieScattering * lightMiePhase;
+
+    float3 localUpVec = normalize(rayPos) * 0.01;
+    float2 earthShadowIntersection = sphIntersect(rayPos + localUpVec, lightDir, CENTER_OF_EARTH, EARTH_RADIUS_KM);
+    float earthShadow = earthShadowIntersection.y < 0.0 ? 1.0 : 0.0;
+        
+    float3 sampleToLightTransmittance = rayMarchSecondary(rayPos);
+
+    float3 singleScattering = lightIlluminance * phaseTimesMediumScattering * sampleToLightTransmittance * earthShadow;
+
+    return (singleScattering - singleScattering * sampleTransmittance) / mediumSample.totalExtinction;
+}
+
 public struct marchPrimaryRay {
     float3 scattering;
     float3 transmittance;
@@ -224,14 +239,21 @@ public marchPrimaryRay rayMarch(in float3 playerSpaceRayOrigin, in float3 player
     float2 atmosLayerBottom = sphIntersect(rayOrigin, playerSpaceRayDirection, CENTER_OF_EARTH, ATMOSHPHERE_BOTTOM_SPHERE_RADIUS_KM);
     float2 atmosLayerTop = sphIntersect(rayOrigin, playerSpaceRayDirection, CENTER_OF_EARTH, ATMOSPHERE_TOP_SPHERE_RADIUS_KM);
 
-    float3 lightPos = mul(float3x3(ap.camera.viewInv), ap.celestial.sunPosition);
-    float3 lightDir = normalize(lightPos);
+    float3 sunLightPos = mul(float3x3(ap.camera.viewInv), ap.celestial.sunPosition);
+    float3 moonLightPos = mul(float3x3(ap.camera.viewInv), ap.celestial.moonPosition);
 
-    float cosTheta = clamp(dot(-playerSpaceRayDirection, normalize(lightDir)), 0.0, 1.0);
+    float3 sunLightDir = normalize(sunLightPos);
+    float3 moonLightDir = normalize(moonLightPos);
+
+    float sunCosTheta = clamp(dot(-playerSpaceRayDirection, sunLightDir), 0.0, 1.0);
+    float moonCosTheta = clamp(dot(-playerSpaceRayDirection, moonLightDir), 0.0, 1.0);
 
     // prerequisites
-    float lightRayleighPhase = rayleighPhase(cosTheta);
-    float lightMiePhase = miePhaseCornetteShanks(cosTheta, 0.8);
+    float sunLightRayleighPhase = rayleighPhase(sunCosTheta);
+    float sunLightMiePhase = miePhaseCornetteShanks(sunCosTheta, 0.8);
+
+    float moonLightRayleighPhase = rayleighPhase(moonCosTheta);
+    float moonLightMiePhase = miePhaseCornetteShanks(moonCosTheta, 0.8);
 
     ////
     float closestDistance;
@@ -265,19 +287,10 @@ public marchPrimaryRay rayMarch(in float3 playerSpaceRayOrigin, in float3 player
         MediumSample mediumSample = sampleMedium(sampleAltitude);
         float3 sampleTransmittance = exp(-mediumSample.totalExtinction * rayStepLength);
 
-        float3 phaseTimesMediumScattering = mediumSample.rayleighScattering * lightRayleighPhase + mediumSample.mieScattering * lightMiePhase;
+        float3 integratedSunSingleScattering = computeIntegratedSingleScatteringForCelestialLight(mediumSample, sunLightRayleighPhase, sunLightMiePhase, rayPos, sunLightDir, sampleTransmittance, SUN_ILLUMINANCE);
+        float3 integratedMoonSingleScattering = computeIntegratedSingleScatteringForCelestialLight(mediumSample, moonLightRayleighPhase, moonLightMiePhase, rayPos, moonLightDir, sampleTransmittance, MOON_ILLUMINANCE);
 
-        float3 localUpVec = normalize(rayPos) * 0.01;
-        float2 earthShadowIntersection = sphIntersect(rayPos + localUpVec, lightDir, CENTER_OF_EARTH, EARTH_RADIUS_KM);
-        float earthShadow = earthShadowIntersection.y < 0.0 ? 1.0 : 0.0;
-        
-        float3 sampleToLightTransmittance = rayMarchSecondary(rayPos);
-
-        float3 singleScattering = LIGHT_ILLUMINANCE * phaseTimesMediumScattering * sampleToLightTransmittance * earthShadow;
-
-        float3 integratedSingleScattering = (singleScattering - singleScattering * sampleTransmittance) / mediumSample.totalExtinction;
-
-        ray.scattering += integratedSingleScattering * ray.transmittance;
+        ray.scattering += (integratedSunSingleScattering + integratedMoonSingleScattering) * ray.transmittance;
         ray.transmittance *= sampleTransmittance;
     }
 
