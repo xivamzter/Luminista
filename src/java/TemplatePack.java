@@ -12,7 +12,7 @@ public class TemplatePack implements ShaderPack {
     public void configurePipeline(Screen screen, PipelineConfig pipeline) {
         pipeline.combinationPass("post/combination");
 
-        var mainTexture = pipeline.texture2D("mainTexture", TextureFormat.RGBA16_UNORM).renderSize().create();
+        var mainTexture = pipeline.texture2D("mainTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
 
         if (pipeline.getSettings().getBoolValue("shadows"))
         pipeline.object(ProgramUsage.SHADOW, "object/shadow", "ShadowShader");

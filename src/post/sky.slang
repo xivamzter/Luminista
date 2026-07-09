@@ -1,4 +1,5 @@
 import aperture;
+import helpers.util;
 
 Texture2D mainTexture;
 
@@ -38,7 +39,9 @@ static const float ATMOSPHERE_THICKNESS_KM = 100.0;
 static const float ATMOSHPHERE_BOTTOM_SPHERE_RADIUS_KM = EARTH_RADIUS_KM;
 static const float ATMOSPHERE_TOP_SPHERE_RADIUS_KM = ATMOSHPHERE_BOTTOM_SPHERE_RADIUS_KM + ATMOSPHERE_THICKNESS_KM;
 
-static const float LIGHT_ILLUMINANCE = 8;
+static const float LIGHT_ILLUMINANCE = 128000;
+static const float MOON_ILLUMINANCE = 0.25;
+static const float SUN_ILLUMINANCE = 128000;
 
 public float3 playerToAtmosphere(float3 playerPos) {
     return fma(playerPos, rcp(1000.0), CAMERA_OFFSET_KM);
@@ -116,6 +119,69 @@ float3 projectAndDivide(float4x4 invProj, float3 pos) {
     return homePos.xyz / homePos.w;
 }
 
+
+//// Second raymarch for sky
+bool getDistancesForSecondRay(in float2 atmosLayerTop, in float2 atmosLayerBottom, out float furthestDistance) {
+
+    // ray existed the top sphere but didn't enter, its origin is inside of the atmosphere
+    if (atmosLayerTop.x < 0.0) {
+
+    furthestDistance = atmosLayerBottom.x >= 0.0 ? min(atmosLayerTop.y, atmosLayerBottom.x) : atmosLayerTop.y;
+
+    return true;
+    }
+
+    return false;
+}
+
+
+public float3 rayMarchSecondary(in float3 playerSpaceRayOrigin) {
+    
+    float3 transmittance = float3(1.0);
+
+    float3 rayOrigin = playerSpaceRayOrigin;
+    
+    float3 lightPos = mul(float3x3(ap.camera.viewInv), ap.celestial.sunPosition);
+    float3 lightDir = normalize(lightPos);
+
+    float2 atmosLayerBottom = sphIntersect(rayOrigin, lightDir, CENTER_OF_EARTH, ATMOSHPHERE_BOTTOM_SPHERE_RADIUS_KM);
+    float2 atmosLayerTop = sphIntersect(rayOrigin, lightDir, CENTER_OF_EARTH, ATMOSPHERE_TOP_SPHERE_RADIUS_KM);
+
+    ////
+    float closestDistance = 0.0;
+    float furthestDistance;
+
+    // Check if need to raymarch
+    bool needToRayMarch = getDistancesForSecondRay(atmosLayerTop, atmosLayerBottom, furthestDistance);
+
+    if (!needToRayMarch) {
+        return transmittance;
+    }
+
+    float3 entryPointPosition = playerSpaceRayOrigin + lightDir * closestDistance;
+    float3 exitPointPosition = playerSpaceRayOrigin + lightDir * furthestDistance;
+
+    // from entry to exit point in defined number of steps
+    float3 rayStep = (exitPointPosition - entryPointPosition) / float(NUM_STEPS);
+
+    // Distance between each step;
+    float rayStepLength = length(rayStep);
+
+    for (int i = 0; i < NUM_STEPS; i++) {
+        float3 rayPos = lerp(entryPointPosition, exitPointPosition, (float(i) + 0.5) / float(NUM_STEPS));
+
+        float sampleAltitude = length(rayPos);
+
+        MediumSample mediumSample = sampleMedium(sampleAltitude);
+        float3 sampleTransmittance = exp(-mediumSample.totalExtinction * rayStepLength);
+
+        transmittance *= sampleTransmittance;
+    }
+
+    return transmittance;
+}
+
+//// First raymarch for sky
 bool getDistances(in float2 atmosLayerTop, in float2 atmosLayerBottom, out float closestDistance, out float furthestDistance) {
 
     // ray didn't exist the top sphere, it missed the atmosphere entirely
@@ -201,9 +267,13 @@ public marchPrimaryRay rayMarch(in float3 playerSpaceRayOrigin, in float3 player
 
         float3 phaseTimesMediumScattering = mediumSample.rayleighScattering * lightRayleighPhase + mediumSample.mieScattering * lightMiePhase;
 
+        float3 localUpVec = normalize(rayPos) * 0.01;
+        float2 earthShadowIntersection = sphIntersect(rayPos + localUpVec, lightDir, CENTER_OF_EARTH, EARTH_RADIUS_KM);
+        float earthShadow = earthShadowIntersection.y < 0.0 ? 1.0 : 0.0;
+        
         float3 sampleToLightTransmittance = rayMarchSecondary(rayPos);
 
-        float3 singleScattering = LIGHT_ILLUMINANCE * phaseTimesMediumScattering * sampleToLightTransmittance; //* earthShadow;
+        float3 singleScattering = LIGHT_ILLUMINANCE * phaseTimesMediumScattering * sampleToLightTransmittance * earthShadow;
 
         float3 integratedSingleScattering = (singleScattering - singleScattering * sampleTransmittance) / mediumSample.totalExtinction;
 
@@ -214,66 +284,8 @@ public marchPrimaryRay rayMarch(in float3 playerSpaceRayOrigin, in float3 player
     return ray;
 }
 
-bool getDistancesForSecondRay(in float2 atmosLayerTop, in float2 atmosLayerBottom, out float furthestDistance) {
 
-    // ray existed the top sphere but didn't enter, its origin is inside of the atmosphere
-    if (atmosLayerTop.x < 0.0) {
-
-    furthestDistance = atmosLayerBottom.x >= 0.0 ? min(atmosLayerTop.y, atmosLayerBottom.x) : atmosLayerTop.y;
-
-    return true;
-    }
-
-    return false;
-}
-
-
-public float3 rayMarchSecondary(in float3 playerSpaceRayOrigin) {
-
-    float3 transmittance = float3(1.0);
-
-    float3 rayOrigin = playerSpaceRayOrigin;
-    
-    float3 lightPos = mul(float3x3(ap.camera.viewInv), ap.celestial.sunPosition);
-    float3 lightDir = normalize(lightPos);
-
-    float2 atmosLayerBottom = sphIntersect(rayOrigin, lightDir, CENTER_OF_EARTH, ATMOSHPHERE_BOTTOM_SPHERE_RADIUS_KM);
-    float2 atmosLayerTop = sphIntersect(rayOrigin, lightDir, CENTER_OF_EARTH, ATMOSPHERE_TOP_SPHERE_RADIUS_KM);
-
-    ////
-    float closestDistance = 0.0;
-    float furthestDistance;
-
-    // Check if need to raymarch
-    bool needToRayMarch = getDistancesForSecondRay(atmosLayerTop, atmosLayerBottom, furthestDistance);
-
-    if (!needToRayMarch) {
-        return transmittance;
-    }
-
-    float3 entryPointPosition = playerSpaceRayOrigin + lightDir * closestDistance;
-    float3 exitPointPosition = playerSpaceRayOrigin + lightDir * furthestDistance;
-
-    // from entry to exit point in defined number of steps
-    float3 rayStep = (exitPointPosition - entryPointPosition) / float(NUM_STEPS);
-
-    // Distance between each step;
-    float rayStepLength = length(rayStep);
-
-    for (int i = 0; i < NUM_STEPS; i++) {
-        float3 rayPos = lerp(entryPointPosition, exitPointPosition, (float(i) + 0.5) / float(NUM_STEPS));
-
-        float sampleAltitude = length(rayPos);
-
-        MediumSample mediumSample = sampleMedium(sampleAltitude);
-        float3 sampleTransmittance = exp(-mediumSample.totalExtinction * rayStepLength);
-
-        transmittance *= sampleTransmittance;
-    }
-
-    return transmittance;
-}
-
+//// Main
 [[shader("pixel")]]
 FragmentOutput applySky(float2 pos: SV_Position) {
 
@@ -281,6 +293,7 @@ FragmentOutput applySky(float2 pos: SV_Position) {
     float depth = ap.depth.sampleLinear(texcoord);
 
     float4 color = mainTexture[pos];
+    color.rgb = decodeColorRgbm16F(color.rgba);
 
     // space conversions
     float3 ndcPos = float3(texcoord * 2.0 - 1.0, depth);
@@ -295,6 +308,8 @@ FragmentOutput applySky(float2 pos: SV_Position) {
     if (depth == 0) {
         color.rgb = color.rgb * ray.transmittance + ray.scattering;
     }
+
+    color = encodeColorRgbm16F(color.rgb);
 
     FragmentOutput output;
 
