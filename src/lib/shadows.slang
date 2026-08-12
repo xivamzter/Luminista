@@ -47,7 +47,7 @@ static float3 getShadow(float3 playerPos, float3 normal) {
     float2 uv;
     float depth;
 
-    float3 shadowScreenPos = projectShadow(playerPos, normal, cascade, uv, depth);
+    bool shadowScreenPos = projectShadow(playerPos, normal, cascade, uv, depth);
 
     // float3 shadowCoord = float3(shadowScreenPos.xy, cascade);
     // float4 shadowColor = texShadowColor.Sample(shadowCoord);

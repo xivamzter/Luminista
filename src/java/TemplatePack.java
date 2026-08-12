@@ -13,25 +13,29 @@ public class TemplatePack implements ShaderPack {
         pipeline.combinationPass("post/combination");
 
         var mainTexture = pipeline.texture2D("mainTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
+        var skyScatteringTexture = pipeline.texture2D("skyScatteringTexture", TextureFormat.RGBA16_SFLOAT).size(screen.renderWidth() / 2, screen.renderHeight() / 2).create();
+        var skyTransmittanceTexture = pipeline.texture2D("skyTransmittanceTexture", TextureFormat.RGBA16_SFLOAT).size(screen.renderWidth() / 2, screen.renderHeight() / 2).create();
+        var ambientScatteringTexture = pipeline.texture2D("ambientScatteringTexture", TextureFormat.RGBA16_SFLOAT).size(1, 1).create();
         var normalTexture = pipeline.texture2D("normalTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
-        var lightmapTexture = pipeline.texture2D("lightmapTexture", TextureFormat.RGBA8_SNORM).renderSize().create();
+        var tangentTexture = pipeline.texture2D("tangentTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
 
-        Buffer luminanceHistogramBuffer = pipeline.buffer("luminanceHistogramBuffer", Integer.BYTES * 256);
-        Buffer exposureBuffer = pipeline.buffer("exposureBuffer", Integer.BYTES * 256);
+        // Buffer luminanceHistogramBuffer = pipeline.buffer("luminanceHistogramBuffer", Integer.BYTES * 256);
+        // Buffer exposureBuffer = pipeline.buffer("exposureBuffer", Integer.BYTES * 256);
 
         // if (pipeline.getSettings().getBoolValue("shadows"))
         pipeline.object(ProgramUsage.SHADOW, "object/shadow", "ShadowShader");
         pipeline.object(ProgramUsage.SKYBOX, "object/skybox", "BasicShader");
-        pipeline.object(ProgramUsage.BASIC, "object/basic", "BasicShader").writes("color", mainTexture).writes("flatNormal", normalTexture).writes("lightMap", lightmapTexture).exportInt("CASCADE_COUNT", CASCADE_COUNT);
-        pipeline.object(ProgramUsage.TRANSLUCENT, "object/basic", "BasicShader").writes("color", mainTexture).writes("flatNormal", normalTexture).writes("lightMap", lightmapTexture).exportInt("CASCADE_COUNT", CASCADE_COUNT);
+        pipeline.object(ProgramUsage.BASIC, "object/basic", "BasicShader").writes("color", mainTexture).writes("flatNormal", normalTexture).writes("tangent", tangentTexture).exportInt("CASCADE_COUNT", CASCADE_COUNT);
+        pipeline.object(ProgramUsage.TRANSLUCENT, "object/basic", "BasicShader").writes("color", mainTexture).writes("flatNormal", normalTexture).writes("tangent", tangentTexture).exportInt("CASCADE_COUNT", CASCADE_COUNT);
 
         pipeline.stage(ProgramStage.PRE_RENDER).clearTo(new Vector4f(0.0f),mainTexture);
 
-        pipeline.stage(ProgramStage.POST_RENDER).composite("sky", "post/sky", "applySky").writes("color", mainTexture);
+        pipeline.stage(ProgramStage.POST_RENDER).composite("sky", "post/sky", "raymarchSky").writes("scattering", skyScatteringTexture).writes("transmittance", skyTransmittanceTexture);
+        pipeline.stage(ProgramStage.POST_RENDER).composite("ambient", "post/ambient", "ambientSky").writes("ambientScattering", ambientScatteringTexture);
         pipeline.stage(ProgramStage.POST_RENDER).composite("lighting", "post/lighting", "applyLighting").writes("color", mainTexture).exportInt("CASCADE_COUNT", CASCADE_COUNT);
-        pipeline.stage(ProgramStage.POST_RENDER).compute("histogram", "compute/histogram", "applyHistogram").dispatch3D(Math.ceilDiv(screen.renderWidth(), 16), Math.ceilDiv(screen.renderHeight(), 8), 1);
-        pipeline.stage(ProgramStage.POST_RENDER).compute("histogramAverage", "compute/histogramAverage", "applyHistogramAverage").dispatch3D(Math.ceilDiv(screen.renderWidth(), 16), Math.ceilDiv(screen.renderHeight(), 8), 1);
-        pipeline.stage(ProgramStage.POST_RENDER).compute("exposure", "compute/exposureBlend", "applyExposure").dispatch3D(Math.ceilDiv(screen.renderWidth(), 16), Math.ceilDiv(screen.renderHeight(), 8), 1);
+        // pipeline.stage(ProgramStage.POST_RENDER).compute("histogram", "compute/histogram", "applyHistogram").dispatch3D(Math.ceilDiv(screen.renderWidth(), 16), Math.ceilDiv(screen.renderHeight(), 8), 1);
+        // pipeline.stage(ProgramStage.POST_RENDER).compute("histogramAverage", "compute/histogramAverage", "applyHistogramAverage").dispatch3D(Math.ceilDiv(screen.renderWidth(), 16), Math.ceilDiv(screen.renderHeight(), 8), 1);
+        // pipeline.stage(ProgramStage.POST_RENDER).compute("exposure", "compute/exposureBlend", "applyExposure").dispatch3D(Math.ceilDiv(screen.renderWidth(), 16), Math.ceilDiv(screen.renderHeight(), 8), 1);
     }
 
     @Override

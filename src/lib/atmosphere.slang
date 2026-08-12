@@ -135,7 +135,7 @@ public float3 rayMarchSecondary(in float3 playerSpaceRayOrigin) {
 
     ////
     float closestDistance = 0.0;
-    float furthestDistance;
+    float furthestDistance = 0.0;
 
     // Check if need to raymarch
     bool needToRayMarch = getDistancesForSecondRay(atmosLayerTop, atmosLayerBottom, furthestDistance);
@@ -239,8 +239,8 @@ public marchPrimaryRay rayMarch(in float3 playerSpaceRayOrigin, in float3 player
     float moonLightMiePhase = miePhaseCornetteShanks(moonCosTheta, 0.8);
 
     ////
-    float closestDistance;
-    float furthestDistance;
+    float closestDistance = 0.0;
+    float furthestDistance = 0.0;
 
     // Check if need to raymarch
     bool needToRayMarch = getDistances(atmosLayerTop, atmosLayerBottom, closestDistance, furthestDistance);

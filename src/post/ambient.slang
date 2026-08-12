@@ -3,11 +3,8 @@ import helpers.util;
 
 import lib.atmosphere;
 
-Texture2D mainTexture;
-
 struct FragmentOutput {
-    float4 scattering;
-    float4 transmittance;
+    float4 ambientScattering;
 }
 
 
@@ -18,15 +15,12 @@ float3 projectAndDivide(float4x4 invProj, float3 pos) {
 
 //// Main
 [[shader("pixel")]]
-FragmentOutput raymarchSky(float2 pos: SV_Position) {
+FragmentOutput ambientSky(float2 pos: SV_Position) {
 
     float2 halfRes = float2(ap.game.screenSize) / 2.0;
 
     float2 texcoord = pos / halfRes;
     float depth = ap.depth.sampleLinear(texcoord);
-
-    // float4 color = mainTexture[pos];
-    // color.rgb = decodeColorRgbm16F(color.rgba);
 
     // space conversions
     float3 ndcPos = float3(texcoord * 2.0 - 1.0, depth);
@@ -36,25 +30,19 @@ FragmentOutput raymarchSky(float2 pos: SV_Position) {
     float3 playerSpaceRayOrigin = float3(0.0, ap.camera.position.y, 0.0);
     float3 playerSpaceRayDirection = normalize(playerSpacePos);
 
-    if (depth == 0) {
-        marchPrimaryRay ray = rayMarch(playerSpaceRayOrigin, playerSpaceRayDirection);
+    if (depth != 0) {
+        marchPrimaryRay ray = rayMarch(playerSpacePos + playerSpaceRayOrigin, float3(0.0, 1.0, 0.0));
 
-        // color.rgb = color.rgb * ray.transmittance + ray.scattering;
-        // color.rgb = color.rgb;
         FragmentOutput output;
 
-        output.scattering = float4(ray.scattering, 1.0);
-        output.transmittance = float4(ray.transmittance, 1.0);
+        output.ambientScattering = float4(ray.scattering, 1.0);
 
         return output;
     }
 
-    // color = encodeColorRgbm16F(color.rgb);
-
     FragmentOutput output;
 
-    output.scattering = float4(float3(0.0), 1.0);
-    output.transmittance = float4(float3(0.0), 1.0);
+    output.ambientScattering = float4(float3(0.0), 1.0);
 
     return output;
 }

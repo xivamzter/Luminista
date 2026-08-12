@@ -6,17 +6,22 @@ import settings; // Contains your shader settings, both realtime and compile tim
 struct Out {
     float4 color;
     float4 flatNormal;
-    float4 lightMap;
+    float4 tangent;
 }
 
 // What you intend to pass from the vertex shader to the fragment shader. Can have whatever you want.
 struct VOut {
     float2 uv : TEXCOORD; // This : TEXCOORD at the end is called a "semantic". It is used to hint to Aperture what it is. Not required, but recommended. In the future, a list of recommended semantics will be provided.
-    float2 lightCoord : LIGHTCOORD;
     float3 pos;
     float4 color : COLOR;
     float3 normal;
     float vertexAO;
+    float4 tangent;
+}
+
+float3 projectAndDivide(float4x4 invProj, float3 pos) {
+    float4 homePos = mul(invProj, float4(pos, 1.0));
+    return homePos.xyz / homePos.w;
 }
 
 struct BasicShader : Shader<VOut, Out> {
@@ -27,11 +32,11 @@ struct BasicShader : Shader<VOut, Out> {
 
         data = VOut(
             input.uv(),
-            input.lightCoord(),
             pos.xyz,
             input.color(),
             input.normal().value,
-            input.vertexAO().value
+            input.vertexAO().value,
+            input.tangent().value
         );
     }
 
@@ -39,7 +44,7 @@ struct BasicShader : Shader<VOut, Out> {
 
         float4 color = input.color;
         float3 flatNormal = input.normal;
-        float2 lightMap = pow(input.lightCoord, float2(2.2));
+
 
         if (let texture = objectData.albedo()) { // Since `albedo()` returns an Optional<Sampleable>, this is one of a few ways to get the true type. You can also do albedo().hasValue and albedo().value, of course.
             color *= texture.sampleTexture(input.uv); // Some objects simply don't have a texture, such as clouds
@@ -53,15 +58,13 @@ struct BasicShader : Shader<VOut, Out> {
         //     color.rgb *= lerp(0.3, 1.0, shadowVisibility(input.pos));
         // }
 
-        color.rgb *= input.vertexAO;
-
         color.rgb = pow(color.rgb, float3(2.2));
-        // float vanillaAO = pow(input.vertexAO, float(2.2));
+        float vanillaAO = pow(input.vertexAO, float(2.2));
 
         Out output;
         output.color = (color);
-        output.flatNormal = float4(flatNormal, 1.0);
-        output.lightMap = float4(lightMap, 0.0, 1.0);
+        output.flatNormal = float4(flatNormal, vanillaAO);
+        output.tangent = input.tangent;
 
         return output;
     }
