@@ -7,3 +7,10 @@ public float4 encodeColorRgbm16F(float3 color) {
 public float3 decodeColorRgbm16F(float4 colorAndMagnitude) {
     return colorAndMagnitude.rgb * colorAndMagnitude.a;
 }
+
+public static const float PI = 3.14159265359;
+
+public float3 projectAndDivide(float4x4 invProj, float3 pos) {
+    float4 homePos = mul(invProj, float4(pos, 1.0));
+    return homePos.xyz / homePos.w;
+}
