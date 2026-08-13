@@ -5,8 +5,8 @@ import lib.atmosphere;
 
 struct FragmentOutput {
     float4 ambientScattering;
+    // float4 ssaoInput;
 }
-
 
 float3 projectAndDivide(float4x4 invProj, float3 pos) {
     float4 homePos = mul(invProj, float4(pos, 1.0));
@@ -19,11 +19,12 @@ FragmentOutput ambientSky(float2 pos: SV_Position) {
 
     float2 halfRes = float2(ap.game.screenSize) / 2.0;
 
-    float2 texcoord = pos / halfRes;
-    float depth = ap.depth.sampleLinear(texcoord);
+    float2 texcoord = pos / ap.game.screenSize;
+    float2 halfTexcoord = pos / halfRes;
+    float depth = ap.depth.sampleLinear(halfTexcoord);
 
     // space conversions
-    float3 ndcPos = float3(texcoord * 2.0 - 1.0, depth);
+    float3 ndcPos = float3(halfTexcoord * 2.0 - 1.0, depth);
     float3 viewPos = projectAndDivide(ap.camera.projectionInv, ndcPos);
     float3 playerSpacePos = mul(ap.camera.viewInv, float4(viewPos, 1.0)).xyz;
 
@@ -43,6 +44,7 @@ FragmentOutput ambientSky(float2 pos: SV_Position) {
     FragmentOutput output;
 
     output.ambientScattering = float4(float3(0.0), 1.0);
+    // output.ssaoInput = float4(result / 16.0, 0.0, 0.0, 1.0);
 
     return output;
 }

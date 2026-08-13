@@ -20,6 +20,7 @@ public class TemplatePack implements ShaderPack {
         var tangentTexture = pipeline.texture2D("tangentTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
         var normalTexture = pipeline.texture2D("normalTexture", TextureFormat.RGBA8_SNORM).renderSize().create();
         var specularTexture = pipeline.texture2D("specularTexture", TextureFormat.RGBA8_SNORM).renderSize().create();
+        var ssaoInput = pipeline.texture2D("ssaoInput", TextureFormat.RGBA8_SNORM).renderSize().create();
 
         // Buffer luminanceHistogramBuffer = pipeline.buffer("luminanceHistogramBuffer", Integer.BYTES * 256);
         // Buffer exposureBuffer = pipeline.buffer("exposureBuffer", Integer.BYTES * 256);
@@ -33,6 +34,7 @@ public class TemplatePack implements ShaderPack {
         pipeline.stage(ProgramStage.PRE_RENDER).clearTo(new Vector4f(0.0f),mainTexture);
 
         pipeline.stage(ProgramStage.POST_RENDER).composite("sky", "post/sky", "raymarchSky").writes("scattering", skyScatteringTexture).writes("transmittance", skyTransmittanceTexture);
+        pipeline.stage(ProgramStage.POST_RENDER).composite("ssao", "post/ssao", "ambientOcclusion").writes("ssaoInput", ssaoInput);
         pipeline.stage(ProgramStage.POST_RENDER).composite("ambient", "post/ambient", "ambientSky").writes("ambientScattering", ambientScatteringTexture);
         pipeline.stage(ProgramStage.POST_RENDER).composite("lighting", "post/lighting", "applyLighting").writes("color", mainTexture).exportInt("CASCADE_COUNT", CASCADE_COUNT);
         // pipeline.stage(ProgramStage.POST_RENDER).compute("histogram", "compute/histogram", "applyHistogram").dispatch3D(Math.ceilDiv(screen.renderWidth(), 16), Math.ceilDiv(screen.renderHeight(), 8), 1);

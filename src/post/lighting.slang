@@ -3,7 +3,6 @@ import helpers.util;
 
 // Imports `helpers/shadows.slang`, since it is declared with `public module shadows`. See the Slang user guide for more info if confused.
 import lib.shadows;
-// import lib.atmosphere;
 import lib.ambientocclusion;
 
 Texture2D mainTexture;
@@ -14,8 +13,7 @@ Texture2D skyTransmittanceTexture;
 Texture2D ambientScatteringTexture;
 Texture2D normalTexture;
 Texture2D specularTexture;
-
-// Texture2D lightmapTexture;
+Texture2D ssaoInput;
 
 static const float PI = 3.14159265359;
 
@@ -32,16 +30,6 @@ struct FragmentOutput {
     float4 color;
 }
 
-public float3x3 constructOrthonormalBasis(float3 normal) {
-    float3 absNormal = abs(normal);
-
-    return float3x3(
-        float3(absNormal.y + normal.z, 0.0, -normal.x),
-        float3(0.0, -absNormal.x - absNormal.z, absNormal.y),
-        normal
-    );
-}
-
 //// Main
 [[shader("pixel")]]
 FragmentOutput applyLighting(float2 pos: SV_Position) {
@@ -53,15 +41,28 @@ FragmentOutput applyLighting(float2 pos: SV_Position) {
 
     float4 color = mainTexture[pos];
 
+    uint2 texDim;
+    ssaoInput.GetDimensions(texDim.x, texDim.y);
+
+    float2 texelSize = 1.0 / float2(texDim);
+
+    float result = 0.0;
+
+    for (int x = -2; x < 2; ++x) {
+        for (int y = -2; y < 2; ++y) {
+            float2 offset = float2(float(x), float(y)) * texelSize;
+            result += ssaoInput.sampleLinear(texcoord + offset).r;
+        }
+    }
+
+    float ssao = result /= 16.0;
+
     color.rgb = decodeColorRgbm16F(color.rgba);
 
     float4 normal = flatNormal[pos];
     float4 tangent = tangentTexture[pos];
 
     float vanillaAO = normal.a;
-
-    // float4 lightMap = lightmapTexture[pos];
-    // lightMap.rgb = decodeColorRgbm16F(lightMap.rgba);
 
     // space conversions
     float3 ndcPos = float3(texcoord * 2.0 - 1.0, depth);
@@ -81,42 +82,24 @@ FragmentOutput applyLighting(float2 pos: SV_Position) {
     color.rgb = color.rgb * skyTransmittance + skyScattering;
 
     } else {
-    // marchPrimaryRay ray = rayMarch(playerSpaceRayOrigin, playerSpaceRayDirection);
 
     // float3 blockLighting = (pow(lightMap.r, 2.2) * 10000) * blocklightColor;
-    // float3 skyLighting = skyScattering;
 
     float4 texNormal = normalTexture[pos];
     float4 texSpecular = specularTexture[pos];
 
-    // float3 shadow = lerp(0.3, 1.0, shadowVisibility(playerSpacePos));
     float3 shadow = lerp(0.3, 1.0, getShadow(playerSpacePos, normal.rgb));
-    // float3 shadow = getShadow(playerSpacePos, normal.rgb);
 
-    float3 sunLighting = shadow * SUN_ILLUMINANCE * max(0.0, dot(normalize(normal.rgb), normalize(ap.celestial.sunPosition))) / PI;
-    float3 moonLighting = shadow * MOON_ILLUMINANCE * max(0.0, dot(normalize(normal.rgb), normalize(ap.celestial.moonPosition))) / PI;
-    
-    // float3 bitangent = cross(tangent.xyz, normal.xyz);
+    // float3 sunLighting = shadow * SUN_ILLUMINANCE * max(0.0, dot(normalize(normal.rgb), normalize(ap.celestial.sunPosition))) / PI;
+    // float3 moonLighting = shadow * MOON_ILLUMINANCE * max(0.0, dot(normalize(normal.rgb), normalize(ap.celestial.moonPosition))) / PI;
 
-    // float3 tangentView = mul(ap.camera.view, float4(tangent.xyz, 1.0)).xyz;
-    // float3 bitangentView = mul(ap.camera.view, float4(bitangent, 1.0)).xyz;
-    float3 normalView = mul(ap.camera.view, float4(normal.xyz, 1.0)).xyz;
-
-    // float3x3 tbn = float3x3(normalize(tangentView), normalize(bitangentView), normalize(normalView));
-    // float3x3 newtbn = constructOrthonormalBasis(normal.xyz);
-
-    float ssao = ssao(viewPos, normalView, 0.5, pos);
-
-    float3 dirLight = sunLighting + moonLighting;
+    // float3 dirLight = sunLighting + moonLighting;
     float3 indirectLight = skyLighting * (ssao * vanillaAO);
 
-    color.rgb *= dirLight + indirectLight;
-
-    // color.rgb = texSpecular.rgb;
+    color.rgb *= indirectLight;
 
     output.color = color;
-
-    // output.color = float4(float3(ssao * vanillaAO), 1.0);
+    // output.color = float4(float3(vanillaAO * ssao), 1.0);
 
     return output;
 
@@ -125,7 +108,6 @@ FragmentOutput applyLighting(float2 pos: SV_Position) {
     color = encodeColorRgbm16F(color.rgb);
 
     output.color = color;
-    // output.color = texNormal;
 
     return output;
 }
