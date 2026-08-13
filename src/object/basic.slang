@@ -7,6 +7,8 @@ struct Out {
     float4 color;
     float4 flatNormal;
     float4 tangent;
+    float4 normalTexture;
+    float4 specularTexture;
 }
 
 // What you intend to pass from the vertex shader to the fragment shader. Can have whatever you want.
@@ -43,8 +45,6 @@ struct BasicShader : Shader<VOut, Out> {
     static Out shadeSurface(PixelData objectData, VOut input) {
 
         float4 color = input.color;
-        float3 flatNormal = input.normal;
-
 
         if (let texture = objectData.albedo()) { // Since `albedo()` returns an Optional<Sampleable>, this is one of a few ways to get the true type. You can also do albedo().hasValue and albedo().value, of course.
             color *= texture.sampleTexture(input.uv); // Some objects simply don't have a texture, such as clouds
@@ -62,9 +62,17 @@ struct BasicShader : Shader<VOut, Out> {
         float vanillaAO = pow(input.vertexAO, float(2.2));
 
         Out output;
-        output.color = (color);
-        output.flatNormal = float4(flatNormal, vanillaAO);
+        output.color = color;
+        output.flatNormal = float4(input.normal, vanillaAO);
         output.tangent = input.tangent;
+        output.normalTexture = float4(0.5, 0.5, 1.0, 1.0);
+        if (let normalTex = objectData.normal()) {
+            output.normalTexture = normalTex.sampleTexture(input.uv);
+        }
+        output.specularTexture = float4(0.0, 0.0, 0.0, 1.0);
+        if (let specularTex = objectData.specular()) {
+            output.specularTexture = specularTex.sampleTexture(input.uv);
+        }
 
         return output;
     }

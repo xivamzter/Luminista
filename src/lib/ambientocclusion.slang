@@ -47,7 +47,7 @@ public float bayer4x4(float2 xy) {
     return fma(bayer2x2(xy * 0.5), 0.25, bayer2x2(xy));
 }
 
-public float ssao(float3 fragPos, float3 normalView,  float radius, float2 pixelCoord) {
+public float ssao(float3 fragPos, float3 normalView, float radius, float2 pixelCoord) {
     float3 normal = normalize(normalView);
     // float3x3 tbn = constructOrthonormalBasis(normal);
 
@@ -78,7 +78,9 @@ public float ssao(float3 fragPos, float3 normalView,  float radius, float2 pixel
 
         float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fragPos.z - sampleView.z));
 
-        occlusion += (sampleView.z > samplePos.z ? 1.0 : 0.0) * NdotD;
+        float bias = 0.0;
+
+        occlusion += (sampleView.z > samplePos.z + bias ? 1.0 : 0.0) * rangeCheck * NdotD;
     }
 
     occlusion /= float(SAMPLE_COUNT);

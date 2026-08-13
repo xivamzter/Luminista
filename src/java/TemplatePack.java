@@ -16,8 +16,10 @@ public class TemplatePack implements ShaderPack {
         var skyScatteringTexture = pipeline.texture2D("skyScatteringTexture", TextureFormat.RGBA16_SFLOAT).size(screen.renderWidth() / 2, screen.renderHeight() / 2).create();
         var skyTransmittanceTexture = pipeline.texture2D("skyTransmittanceTexture", TextureFormat.RGBA16_SFLOAT).size(screen.renderWidth() / 2, screen.renderHeight() / 2).create();
         var ambientScatteringTexture = pipeline.texture2D("ambientScatteringTexture", TextureFormat.RGBA16_SFLOAT).size(1, 1).create();
-        var normalTexture = pipeline.texture2D("normalTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
+        var flatNormal = pipeline.texture2D("flatNormal", TextureFormat.RGBA16_SFLOAT).renderSize().create();
         var tangentTexture = pipeline.texture2D("tangentTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
+        var normalTexture = pipeline.texture2D("normalTexture", TextureFormat.RGBA8_SNORM).renderSize().create();
+        var specularTexture = pipeline.texture2D("specularTexture", TextureFormat.RGBA8_SNORM).renderSize().create();
 
         // Buffer luminanceHistogramBuffer = pipeline.buffer("luminanceHistogramBuffer", Integer.BYTES * 256);
         // Buffer exposureBuffer = pipeline.buffer("exposureBuffer", Integer.BYTES * 256);
@@ -25,8 +27,8 @@ public class TemplatePack implements ShaderPack {
         // if (pipeline.getSettings().getBoolValue("shadows"))
         pipeline.object(ProgramUsage.SHADOW, "object/shadow", "ShadowShader");
         pipeline.object(ProgramUsage.SKYBOX, "object/skybox", "BasicShader");
-        pipeline.object(ProgramUsage.BASIC, "object/basic", "BasicShader").writes("color", mainTexture).writes("flatNormal", normalTexture).writes("tangent", tangentTexture).exportInt("CASCADE_COUNT", CASCADE_COUNT);
-        pipeline.object(ProgramUsage.TRANSLUCENT, "object/basic", "BasicShader").writes("color", mainTexture).writes("flatNormal", normalTexture).writes("tangent", tangentTexture).exportInt("CASCADE_COUNT", CASCADE_COUNT);
+        pipeline.object(ProgramUsage.BASIC, "object/basic", "BasicShader").writes("color", mainTexture).writes("flatNormal", flatNormal).writes("tangent", tangentTexture).writes("normalTexture", normalTexture).writes("specularTexture", specularTexture).exportInt("CASCADE_COUNT", CASCADE_COUNT);
+        pipeline.object(ProgramUsage.TRANSLUCENT, "object/basic", "BasicShader").writes("color", mainTexture).writes("flatNormal", flatNormal).writes("tangent", tangentTexture).writes("normalTexture", normalTexture).writes("specularTexture", specularTexture).exportInt("CASCADE_COUNT", CASCADE_COUNT);
 
         pipeline.stage(ProgramStage.PRE_RENDER).clearTo(new Vector4f(0.0f),mainTexture);
 

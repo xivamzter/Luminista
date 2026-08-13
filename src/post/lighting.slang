@@ -7,11 +7,13 @@ import lib.shadows;
 import lib.ambientocclusion;
 
 Texture2D mainTexture;
-Texture2D normalTexture;
+Texture2D flatNormal;
 Texture2D tangentTexture;
 Texture2D skyScatteringTexture;
 Texture2D skyTransmittanceTexture;
 Texture2D ambientScatteringTexture;
+Texture2D normalTexture;
+Texture2D specularTexture;
 
 // Texture2D lightmapTexture;
 
@@ -53,15 +55,13 @@ FragmentOutput applyLighting(float2 pos: SV_Position) {
 
     color.rgb = decodeColorRgbm16F(color.rgba);
 
-    float4 normal = normalTexture[pos];
+    float4 normal = flatNormal[pos];
     float4 tangent = tangentTexture[pos];
 
     float vanillaAO = normal.a;
 
     // float4 lightMap = lightmapTexture[pos];
     // lightMap.rgb = decodeColorRgbm16F(lightMap.rgba);
-
-    
 
     // space conversions
     float3 ndcPos = float3(texcoord * 2.0 - 1.0, depth);
@@ -86,6 +86,9 @@ FragmentOutput applyLighting(float2 pos: SV_Position) {
     // float3 blockLighting = (pow(lightMap.r, 2.2) * 10000) * blocklightColor;
     // float3 skyLighting = skyScattering;
 
+    float4 texNormal = normalTexture[pos];
+    float4 texSpecular = specularTexture[pos];
+
     // float3 shadow = lerp(0.3, 1.0, shadowVisibility(playerSpacePos));
     float3 shadow = lerp(0.3, 1.0, getShadow(playerSpacePos, normal.rgb));
     // float3 shadow = getShadow(playerSpacePos, normal.rgb);
@@ -100,21 +103,29 @@ FragmentOutput applyLighting(float2 pos: SV_Position) {
     float3 normalView = mul(ap.camera.view, float4(normal.xyz, 1.0)).xyz;
 
     // float3x3 tbn = float3x3(normalize(tangentView), normalize(bitangentView), normalize(normalView));
-
     // float3x3 newtbn = constructOrthonormalBasis(normal.xyz);
 
     float ssao = ssao(viewPos, normalView, 0.5, pos);
 
     float3 dirLight = sunLighting + moonLighting;
-    float3 indirectLight = skyLighting * (ssao + vanillaAO);
+    float3 indirectLight = skyLighting * (ssao * vanillaAO);
 
     color.rgb *= dirLight + indirectLight;
+
+    // color.rgb = texSpecular.rgb;
+
+    output.color = color;
+
+    // output.color = float4(float3(ssao * vanillaAO), 1.0);
+
+    return output;
+
     }
 
     color = encodeColorRgbm16F(color.rgb);
 
-    // output.color = float4(float3(ssao), 1.0);
     output.color = color;
+    // output.color = texNormal;
 
     return output;
 }

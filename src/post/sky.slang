@@ -3,8 +3,6 @@ import helpers.util;
 
 import lib.atmosphere;
 
-Texture2D mainTexture;
-
 struct FragmentOutput {
     float4 scattering;
     float4 transmittance;
