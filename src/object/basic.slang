@@ -21,9 +21,14 @@ struct VOut {
     float4 tangent;
 }
 
-float3 projectAndDivide(float4x4 invProj, float3 pos) {
-    float4 homePos = mul(invProj, float4(pos, 1.0));
-    return homePos.xyz / homePos.w;
+// TBN matrix thanks to jake
+float3x3 computeTbnMatrix(float3 normal, float4 tangent) {
+    float3x3 tbnMatrix;
+    tbnMatrix[2] = normal;
+    tbnMatrix[0] = tangent.xyz;
+    tbnMatrix[1] = cross(tbnMatrix[0], tbnMatrix[2]) * select(tangent.w >= 0.0, 1.0, -1.0);
+
+    return tbnMatrix;
 }
 
 struct BasicShader : Shader<VOut, Out> {
@@ -58,17 +63,30 @@ struct BasicShader : Shader<VOut, Out> {
         //     color.rgb *= lerp(0.3, 1.0, shadowVisibility(input.pos));
         // }
 
+        float3x3 tbn = computeTbnMatrix(input.normal, input.tangent);
+
+        float4 labNormal = float4(0, 0, 1, 0);
+
+        if (let normalTex = objectData.normal()) {
+            labNormal = normalTex.sampleLevel(input.uv, 0.0);
+        }
+
+        float labAO = labNormal.b;
+
+        labNormal.xy = labNormal.xy * 2.0 - 1.0;
+	    labNormal.z = sqrt(1.0 - dot(labNormal.xy, labNormal.xy));
+
+        float3 normal = normalize(mul(labNormal.xyz, tbn));
+
         color.rgb = pow(color.rgb, float3(2.2));
+
         float vanillaAO = pow(input.vertexAO, float(2.2));
 
         Out output;
         output.color = color;
         output.flatNormal = float4(input.normal, vanillaAO);
         output.tangent = input.tangent;
-        output.normalTexture = float4(0.5, 0.5, 1.0, 1.0);
-        if (let normalTex = objectData.normal()) {
-            output.normalTexture = normalTex.sampleTexture(input.uv);
-        }
+        output.normalTexture = float4(normal.xyz, labAO);
         output.specularTexture = float4(0.0, 0.0, 0.0, 1.0);
         if (let specularTex = objectData.specular()) {
             output.specularTexture = specularTex.sampleTexture(input.uv);

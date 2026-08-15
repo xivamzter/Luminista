@@ -14,3 +14,7 @@ public float3 projectAndDivide(float4x4 invProj, float3 pos) {
     float4 homePos = mul(invProj, float4(pos, 1.0));
     return homePos.xyz / homePos.w;
 }
+
+public float pow2(float x) {
+    return (x * x);
+}

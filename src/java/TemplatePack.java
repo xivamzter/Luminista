@@ -18,9 +18,9 @@ public class TemplatePack implements ShaderPack {
         var ambientScatteringTexture = pipeline.texture2D("ambientScatteringTexture", TextureFormat.RGBA16_SFLOAT).size(1, 1).create();
         var flatNormal = pipeline.texture2D("flatNormal", TextureFormat.RGBA16_SFLOAT).renderSize().create();
         var tangentTexture = pipeline.texture2D("tangentTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
-        var normalTexture = pipeline.texture2D("normalTexture", TextureFormat.RGBA8_SNORM).renderSize().create();
-        var specularTexture = pipeline.texture2D("specularTexture", TextureFormat.RGBA8_SNORM).renderSize().create();
-        var ssaoInput = pipeline.texture2D("ssaoInput", TextureFormat.RGBA8_SNORM).renderSize().create();
+        var normalTexture = pipeline.texture2D("normalTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
+        var specularTexture = pipeline.texture2D("specularTexture", TextureFormat.RGBA8_UNORM).renderSize().create();
+        var ssaoInput = pipeline.texture2D("ssaoInput", TextureFormat.RGBA8_UNORM).renderSize().create();
 
         // Buffer luminanceHistogramBuffer = pipeline.buffer("luminanceHistogramBuffer", Integer.BYTES * 256);
         // Buffer exposureBuffer = pipeline.buffer("exposureBuffer", Integer.BYTES * 256);

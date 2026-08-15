@@ -3,6 +3,7 @@ import helpers.util;
 
 // Imports `helpers/shadows.slang`, since it is declared with `public module shadows`. See the Slang user guide for more info if confused.
 import lib.shadows;
+import lib.brdf;
 
 Texture2D mainTexture;
 Texture2D flatNormal;
@@ -28,6 +29,8 @@ FragmentOutput applyLighting(float2 pos: SV_Position) {
 
     FragmentOutput output;
 
+    
+
     float2 texcoord = pos / ap.game.screenSize;
     float depth = ap.depth.sampleLinear(texcoord);
 
@@ -40,6 +43,8 @@ FragmentOutput applyLighting(float2 pos: SV_Position) {
     float3 viewPos = projectAndDivide(ap.camera.projectionInv, ndcPos);
     float3 playerSpacePos = mul(ap.camera.viewInv, float4(viewPos, 1.0)).xyz;
 
+    float4 labNormal = normalTexture.sampleLinear(texcoord);
+
     if (depth == 0.0) {
 
     float3 skyScattering = skyScatteringTexture.sampleLinear(texcoord).rgb;
@@ -47,12 +52,20 @@ FragmentOutput applyLighting(float2 pos: SV_Position) {
 
     color.rgb = color.rgb * skyTransmittance + skyScattering;
 
-    } 
+    } else {
 
     float4 flatNormal = flatNormal[pos];
     float vanillaAO = flatNormal.a;
 
     float3 skyLighting = ambientScatteringTexture.sampleLinear(texcoord).rgb;
+
+    float labAO = labNormal.a;
+    
+    float4 specularTex = specularTexture[pos]; // smoothness
+    float roughness = pow(1.0 - specularTex.r, 2.0);
+    roughness = max(roughness.r, 0.04);
+
+    float reflectance = specularTex.g;
 
     //// SSAO Blur
 
@@ -74,17 +87,41 @@ FragmentOutput applyLighting(float2 pos: SV_Position) {
 
     ////
 
+    float3 viewDir = normalize(-playerSpacePos);
+    float3 lightDir = normalize(ap.celestial.position);
+    // float3 halfwayDir = normalize(lightDir + viewDir);
+
     // float3 blockLighting = (pow(lightMap.r, 2.2) * 10000) * blocklightColor;
 
-    float3 shadow = lerp(0.3, 1.0, getShadow(playerSpacePos, flatNormal.rgb));
+    float3 shadow = getShadow(playerSpacePos, flatNormal.rgb);
 
-    float3 sunLighting = shadow * SUN_ILLUMINANCE * max(0.0, dot(normalize(flatNormal.rgb), normalize(ap.celestial.sunPosition))) / PI;
-    float3 moonLighting = shadow * MOON_ILLUMINANCE * max(0.0, dot(normalize(flatNormal.rgb), normalize(ap.celestial.moonPosition))) / PI;
+    // float3 sunLighting = shadow * (SUN_ILLUMINANCE * max(0.0, dot(normalize(flatNormal.rgb), normalize(ap.celestial.sunPosition))) / PI);
+    // float3 moonLighting = shadow * (MOON_ILLUMINANCE * max(0.0, dot(normalize(flatNormal.rgb), normalize(ap.celestial.moonPosition))) / PI);
 
-    float3 directLight = sunLighting + moonLighting;
-    float3 indirectLight = skyLighting * (ssao * vanillaAO);
+    // float3 ambientLighting = skyLighting * (ssao * vanillaAO * labAO);
+    // float3 diffuseLighting = shadow * max(0.0, dot(normalize(flatNormal.rgb), lightDir)) * SUN_ILLUMINANCE / PI;
+    // float3 specularLighting = shadow * SUN_ILLUMINANCE * pow(max(dot(flatNormal.rgb, halfwayDir), 0.0), 64.0) / PI;
 
-    color.rgb *= directLight + indirectLight;
+    // color.rgb *= shadow * (ambientLighting + diffuseLighting + specularLighting);
+    float3 debugF0;
+    float3 brdf = brdf(lightDir, viewDir, color.rgb, reflectance, labNormal.rgb, roughness, SUN_ILLUMINANCE, debugF0);
+
+    // float3 directLight = sunLighting + moonLighting;
+    float3 directLight = shadow * brdf;
+    float3 indirectLight = (skyLighting) * (ssao * vanillaAO * labAO);
+
+    color.rgb *= indirectLight + directLight;
+
+    // output.color = encodeColorRgbm16F(debugF0);
+    color = encodeColorRgbm16F(color.rgb);
+
+    output.color = color;
+    // output.color = float4(labNormal.rgb, 1.0);
+    // output.color = float4(float3(ssao), 1.0);
+    
+
+    return output;
+    }
 
     color = encodeColorRgbm16F(color.rgb);
 

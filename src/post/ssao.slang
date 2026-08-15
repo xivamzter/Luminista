@@ -106,7 +106,6 @@ FragmentOutput ambientOcclusion(float2 pos: SV_Position) {
     // space conversions
     float3 ndcPos = float3(texcoord * 2.0 - 1.0, depth);
     float3 viewPos = projectAndDivide(ap.camera.projectionInv, ndcPos);
-    float3 playerSpacePos = mul(ap.camera.viewInv, float4(viewPos, 1.0)).xyz;
 
     float3 viewNormal = mul(ap.camera.view, float4(flatNormal, 1.0)).xyz;
 
