@@ -1,5 +1,6 @@
 import aperture;
 import helpers.util;
+import settings;
 
 // Imports `helpers/shadows.slang`, since it is declared with `public module shadows`. See the Slang user guide for more info if confused.
 import lib.shadows;
@@ -103,19 +104,24 @@ FragmentOutput applyLighting(float2 pos: SV_Position) {
     // float3 specularLighting = shadow * SUN_ILLUMINANCE * pow(max(dot(flatNormal.rgb, halfwayDir), 0.0), 64.0) / PI;
 
     // color.rgb *= shadow * (ambientLighting + diffuseLighting + specularLighting);
-    float3 debugF0;
-    float3 brdf = brdf(lightDir, viewDir, color.rgb, reflectance, labNormal.rgb, roughness, SUN_ILLUMINANCE, debugF0);
+    float debugBRDF;
+    float3 brdf = brdf(lightDir, viewDir, color.rgb, reflectance, labNormal.rgb, roughness, SUN_ILLUMINANCE, debugBRDF);
 
     // float3 directLight = sunLighting + moonLighting;
+
     float3 directLight = shadow * brdf;
+
+    if (!userSettings.SHADOW_ENABLED) {
+        directLight = brdf;
+    }
+
     float3 indirectLight = (skyLighting) * (ssao * vanillaAO * labAO);
 
     color.rgb *= indirectLight + directLight;
 
-    // output.color = encodeColorRgbm16F(debugF0);
-    color = encodeColorRgbm16F(color.rgb);
+    // output.color = encodeColorRgbm16F(float3(debugBRDF));
 
-    output.color = color;
+    output.color = encodeColorRgbm16F(color.rgb);
     // output.color = float4(labNormal.rgb, 1.0);
     // output.color = float4(float3(ssao), 1.0);
     

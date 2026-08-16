@@ -78,7 +78,7 @@ LabConductorData getLabConductorData(in int conductor, in float3 albedo) {
     return data;
 }
 
-public float3 brdf(float3 l, float3 v, float3 albedo, float reflectance, float3 n, float roughness, float radiance, out float3 debugF0) {
+public float3 brdf(float3 l, float3 v, float3 albedo, float reflectance, float3 n, float roughness, float radiance, out float debug) {
 
     float3 oL = float3(0.0);
 
@@ -119,7 +119,7 @@ public float3 brdf(float3 l, float3 v, float3 albedo, float reflectance, float3 
         F = fresnelSchlick(cosTheta, f0);
     }
 
-    debugF0 = f0;
+    debug = metallic;
 
     float NDF = ndf(nDotH, roughness);
     float G = geometrySmith(nDotV, nDotL, roughness);

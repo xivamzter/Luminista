@@ -1,12 +1,11 @@
 public module shadows;
 
 import aperture;
-
-extern static const int CASCADE_COUNT;
+import settings;
 
 static bool projectShadow(float3 playerPos, float3 normal, out int cascadeIndex, out float2 uv, out float depth) {
 
-    uint cascadeCount = min(CASCADE_COUNT, max(1u, ap.celestial.cascadeCount));
+    uint cascadeCount = min(userSettings.SHADOW_CASCADE_COUNT, max(1u, ap.celestial.cascadeCount));
 
     float3 shadowViewPos = mul(ap.celestial.view, float4(playerPos, 1.0)).xyz;
     float4 shadowClipPos;

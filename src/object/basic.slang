@@ -68,7 +68,7 @@ struct BasicShader : Shader<VOut, Out> {
         float4 labNormal = float4(0, 0, 1, 0);
 
         if (let normalTex = objectData.normal()) {
-            labNormal = normalTex.sampleLevel(input.uv, 0.0);
+            labNormal = normalTex.sampleLevel(input.uv, 0);
         }
 
         float labAO = labNormal.b;
