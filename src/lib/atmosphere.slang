@@ -1,5 +1,10 @@
 import aperture;
 
+/*
+////////// CREDITS \\\\\\\\\\
+Jake Michie | Dev of Continuum - For basically everything with atmosphere;
+*/
+
 static const float3 ATMOSPHERE_RAYLEIGH_SCATTERING_COEFFICIENT = float3(0.005802, 0.013558, 0.033100);
 static const float3 ATMOSPHERE_RAYLEIGH_ABSORPTION_COEFFICIENT = float3(0.0);
 static const float3 ATMOSPHERE_RAYLEIGH_EXTINCTION_COEFFICIENT = ATMOSPHERE_RAYLEIGH_SCATTERING_COEFFICIENT + ATMOSPHERE_RAYLEIGH_ABSORPTION_COEFFICIENT;

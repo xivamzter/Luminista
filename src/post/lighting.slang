@@ -44,7 +44,7 @@ float2 sphIntersect( in float3 ro, in float3 rd, in float3 ce, float ra )
 
 public float earthShadow(float3 rayPos, float3 lightDir) {
     float3 localUpVec = normalize(rayPos) * 0.01;
-    float2 earthShadowIntersection = sphIntersect(rayPos + localUpVec, lightDir, CENTER_OF_EARTH, EARTH_RADIUS_KM);
+    float2 earthShadowIntersection = sphIntersect(rayPos + localUpVec, lightDir, CENTER_OF_EARTH, EARTH_RADIUS_KM + CAMERA_ALTITUDE_KM);
     return earthShadowIntersection.y < 0.0 ? 1.0 : 0.0;
 }
 
