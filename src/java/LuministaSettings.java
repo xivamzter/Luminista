@@ -27,6 +27,9 @@ public class LuministaSettings implements PackSettings {
 
         final var screenDebugView = screen.child("debugView");
         screenDebugView.option("DEBUG_VIEW", OptionType.boolType(false), false);
+
+		final var screenLabPBR = screen.child("labPBR");
+		screenLabPBR.option("NORMAL_MAPPING", OptionType.boolType(true), false);
     }
     
 }

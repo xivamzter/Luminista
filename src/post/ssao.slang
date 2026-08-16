@@ -1,10 +1,11 @@
 import aperture;
 import helpers.util;
 
-Texture2D flatNormal;
+Texture2D flatNormalTexture;
+Texture2D lightmapTexture;
 
 struct FragmentOutput {
-    float4 ssaoInput;
+    float4 lightmap;
 }
 
 static const float RADIUS = 0.5;
@@ -101,7 +102,8 @@ FragmentOutput ambientOcclusion(float2 pos: SV_Position) {
     float2 texcoord = pos / ap.game.screenSize;
     float depth = ap.depth.sampleLinear(texcoord);
 
-    float3 flatNormal = flatNormal[pos].rgb;
+    float3 flatNormal = flatNormalTexture[pos].rgb;
+    float4 lightmap = lightmapTexture[pos];
 
     // space conversions
     float3 ndcPos = float3(texcoord * 2.0 - 1.0, depth);
@@ -113,12 +115,12 @@ FragmentOutput ambientOcclusion(float2 pos: SV_Position) {
 
         float ssao = ssao(viewPos, viewNormal, RADIUS, pos);
 
-        output.ssaoInput = float4(float3(ssao), 1.0);
+        output.lightmap = float4(lightmap.rgb, ssao);
 
         return output;
     }
 
-    output.ssaoInput = float4(float3(1.0), 1.0);
+    output.lightmap = float4(lightmap.rgb, 1.0);
 
     return output;
 }

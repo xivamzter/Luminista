@@ -12,14 +12,14 @@ public class Luminista implements ShaderPack {
         pipeline.combinationPass("post/combination");
 
         var mainTexture = pipeline.texture2D("mainTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
+        var flatNormalTexture = pipeline.texture2D("flatNormalTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
+        var lightmapTexture = pipeline.texture2D("lightmapTexture", TextureFormat.RGBA8_UNORM).renderSize().create();
+        var labPBRNormalTexture = pipeline.texture2D("labPBRNormalTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
+        var labPBRSpecularTexture = pipeline.texture2D("labPBRSpecularTexture", TextureFormat.RGBA8_UNORM).renderSize().create();
+
         var skyScatteringTexture = pipeline.texture2D("skyScatteringTexture", TextureFormat.RGBA16_SFLOAT).size(screen.renderWidth() / 2, screen.renderHeight() / 2).create();
         var skyTransmittanceTexture = pipeline.texture2D("skyTransmittanceTexture", TextureFormat.RGBA16_SFLOAT).size(screen.renderWidth() / 2, screen.renderHeight() / 2).create();
         var ambientScatteringTexture = pipeline.texture2D("ambientScatteringTexture", TextureFormat.RGBA16_SFLOAT).size(1, 1).create();
-        var flatNormal = pipeline.texture2D("flatNormal", TextureFormat.RGBA16_SFLOAT).renderSize().create();
-        var tangentTexture = pipeline.texture2D("tangentTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
-        var normalTexture = pipeline.texture2D("normalTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
-        var specularTexture = pipeline.texture2D("specularTexture", TextureFormat.RGBA8_UNORM).renderSize().create();
-        var ssaoInput = pipeline.texture2D("ssaoInput", TextureFormat.RGBA8_UNORM).renderSize().create();
 
         // Buffer luminanceHistogramBuffer = pipeline.buffer("luminanceHistogramBuffer", Integer.BYTES * 256);
         // Buffer exposureBuffer = pipeline.buffer("exposureBuffer", Integer.BYTES * 256);
@@ -27,13 +27,13 @@ public class Luminista implements ShaderPack {
         if (pipeline.settings().getBoolValue("SHADOW_ENABLED"))
         pipeline.object(ProgramUsage.SHADOW, "object/shadow", "ShadowShader");
         pipeline.object(ProgramUsage.SKYBOX, "object/skybox", "BasicShader");
-        pipeline.object(ProgramUsage.BASIC, "object/basic", "BasicShader").writes("color", mainTexture).writes("flatNormal", flatNormal).writes("tangent", tangentTexture).writes("normalTexture", normalTexture).writes("specularTexture", specularTexture);
-        pipeline.object(ProgramUsage.TRANSLUCENT, "object/basic", "BasicShader").writes("color", mainTexture).writes("flatNormal", flatNormal).writes("tangent", tangentTexture).writes("normalTexture", normalTexture).writes("specularTexture", specularTexture);
+        pipeline.object(ProgramUsage.BASIC, "object/basic", "BasicShader").writes("color", mainTexture).writes("flatNormal", flatNormalTexture).writes("lightmap", lightmapTexture).writes("labPBRNormal", labPBRNormalTexture).writes("labPBRSpecular", labPBRSpecularTexture);
+        pipeline.object(ProgramUsage.TRANSLUCENT, "object/basic", "BasicShader").writes("color", mainTexture).writes("flatNormal", flatNormalTexture).writes("lightmap", lightmapTexture).writes("labPBRNormal", labPBRNormalTexture).writes("labPBRSpecular", labPBRSpecularTexture);
 
         pipeline.stage(ProgramStage.PRE_RENDER).clearTo(new Vector4f(0.0f),mainTexture);
 
         pipeline.stage(ProgramStage.POST_RENDER).composite("sky", "post/sky", "raymarchSky").writes("scattering", skyScatteringTexture).writes("transmittance", skyTransmittanceTexture);
-        pipeline.stage(ProgramStage.POST_RENDER).composite("ssao", "post/ssao", "ambientOcclusion").writes("ssaoInput", ssaoInput);
+        pipeline.stage(ProgramStage.POST_RENDER).composite("ssao", "post/ssao", "ambientOcclusion").writes("lightmap", lightmapTexture);
         pipeline.stage(ProgramStage.POST_RENDER).composite("ambient", "post/ambient", "ambientSky").writes("ambientScattering", ambientScatteringTexture);
         pipeline.stage(ProgramStage.POST_RENDER).composite("lighting", "post/lighting", "applyLighting").writes("color", mainTexture);
         // pipeline.stage(ProgramStage.POST_RENDER).compute("histogram", "compute/histogram", "applyHistogram").dispatch3D(Math.ceilDiv(screen.renderWidth(), 16), Math.ceilDiv(screen.renderHeight(), 8), 1);

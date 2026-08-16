@@ -1,7 +1,8 @@
 import aperture;
 import helpers.util;
-
 import lib.atmosphere;
+
+Texture2D mainTexture;
 
 struct FragmentOutput {
     float4 scattering;
@@ -13,6 +14,8 @@ struct FragmentOutput {
 FragmentOutput raymarchSky(float2 pos: SV_Position) {
 
     FragmentOutput output;
+
+    float4 color = mainTexture[pos];
 
     float2 halfRes = float2(ap.game.screenSize) / 2.0;
 
@@ -36,8 +39,8 @@ FragmentOutput raymarchSky(float2 pos: SV_Position) {
         return output;
     }
 
-    output.scattering = float4(float3(0.0), 1.0);
-    output.transmittance = float4(float3(0.0), 1.0);
+    output.scattering = float4(float3(1.0, 0.0, 0.0), 1.0);
+    output.transmittance = float4(float3(0.0, 0.0, 1.0), 1.0);
 
     return output;
 }

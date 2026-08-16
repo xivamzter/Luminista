@@ -2,6 +2,7 @@
 public module settings;
 
 extern static const bool value_DEBUG_VIEW;
+extern static const bool value_NORMAL_MAPPING;
 extern static const int value_SHADOW_CASCADE_COUNT;
 extern static const int value_SHADOW_DISTANCE;
 extern static const bool value_SHADOW_ENABLED;
@@ -9,6 +10,7 @@ extern static const bool value_SHADOW_ENABLED;
 struct Settings {
     int SHADOW_RESOLUTION;
     static const bool DEBUG_VIEW = value_DEBUG_VIEW;
+    static const bool NORMAL_MAPPING = value_NORMAL_MAPPING;
     static const int SHADOW_CASCADE_COUNT = value_SHADOW_CASCADE_COUNT;
     static const int SHADOW_DISTANCE = value_SHADOW_DISTANCE;
     static const bool SHADOW_ENABLED = value_SHADOW_ENABLED;
