@@ -4,7 +4,7 @@ import helpers.util;
 static const float minLogLum = -4;
 static const float maxLogLum = 24;
 static const float logLumRange = maxLogLum - minLogLum;
-static float timeCoeff = 0.05;
+static float timeCoeff = 0.5;
 
 float computeEV100FromAvgLuminance(float avgLuminance) {
 // We later use the middle gray at 12.7% in order to have
@@ -24,7 +24,7 @@ float convertEV100ToExposure(float EV100) {
 // = 1.2 * 2^ EV
 // Reference : http :// en. wikipedia . org / wiki / Film_speed
 float maxLuminance = 1.2f * pow (2.0f, EV100);
-return maxLuminance;
+return 1.0/ maxLuminance;
 }
 
 RWTexture2D mainTexture;
@@ -65,16 +65,16 @@ void applyHistogramAverage(uint3 globalThreadId: SV_DispatchThreadID, uint local
 
         float lumLastFrame = exposureBuffer[0].x;
 
-        float adaptedLum = (lumLastFrame + (weightedAvgLum - lumLastFrame) * timeCoeff);
+        float adaptedLum = 0.0;
 
-        float computeEV100 = 0.0;
-
-        if (ap.timing.frameCounter > 0) {
-            computeEV100 = computeEV100FromAvgLuminance(adaptedLum);
+        if (ap.timing.frameCounter > 1) {
+            adaptedLum = lumLastFrame + (weightedAvgLum - lumLastFrame) * ap.timing.lastFrameTime;
         } else {
-            computeEV100 = computeEV100FromAvgLuminance(weightedAvgLum);
+            adaptedLum = weightedAvgLum;
         }
 
+        float computeEV100 = computeEV100FromAvgLuminance(adaptedLum);
+        computeEV100 = clamp(computeEV100, minLogLum, maxLogLum);
         float exposure = convertEV100ToExposure(computeEV100);
 
         exposureBuffer[0] = float2(adaptedLum, exposure);

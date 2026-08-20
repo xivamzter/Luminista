@@ -9,8 +9,7 @@ public class Luminista implements ShaderPack {
 
     @Override
     public void configurePipeline(Screen screen, PipelineConfig pipeline) {
-        pipeline.combinationPass("post/combination");
-
+    
         var mainTexture = pipeline.texture2D("mainTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
         var flatNormalTexture = pipeline.texture2D("flatNormalTexture", TextureFormat.RGBA16_SFLOAT).renderSize().create();
         var lightmapTexture = pipeline.texture2D("lightmapTexture", TextureFormat.RGBA8_UNORM).renderSize().create();
@@ -39,6 +38,8 @@ public class Luminista implements ShaderPack {
 
         pipeline.stage(ProgramStage.POST_RENDER).compute("histogram", "compute/histogram", "applyHistogram").dispatch3D(Math.ceilDiv(screen.renderWidth(), 16), Math.ceilDiv(screen.renderHeight(), 16), 1); //Global histogram
         pipeline.stage(ProgramStage.POST_RENDER).compute("histogramAverage", "compute/histogramAverage", "applyHistogramAverage").dispatch1D(1); //Calculate average
+
+        pipeline.combinationPass("post/combination");
 
         // pipeline.stage(ProgramStage.POST_RENDER).compute("exposure", "compute/exposureBlend", "applyExposure").dispatch3D(Math.ceilDiv(screen.renderWidth(), 16), Math.ceilDiv(screen.renderHeight(), 8), 1);
     }

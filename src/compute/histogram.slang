@@ -42,8 +42,9 @@ void applyHistogram(uint3 globalThreadId: SV_DispatchThreadID, uint groupIndex: 
 
     if (all(globalThreadId.xy < ap.game.renderSize)) {
 
-        float3 hdrColor = mainTexture[int2(globalThreadId.xy)].xyz;
-        uint binIndex = colorToBin(hdrColor, u_params.x, u_params.y);
+        float4 hdrColor = mainTexture[int2(globalThreadId.xy)];
+        hdrColor.rgb = decodeColorRgbm16F(hdrColor);
+        uint binIndex = colorToBin(hdrColor.rgb, u_params.x, u_params.y);
 
         InterlockedAdd(histogramShared[binIndex], 1);
     }
