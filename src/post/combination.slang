@@ -17,7 +17,6 @@ float4 main(float2 pos: SV_Position) {
 
         color.rgb *= exposure;
 
-        color.rgb /= 10000.0;
         color = color / (1.0 + color);
     }
    

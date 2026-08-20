@@ -4,7 +4,7 @@ import helpers.util;
 static const float minLogLum = -4;
 static const float maxLogLum = 24;
 static const float logLumRange = maxLogLum - minLogLum;
-static const float timeCoeff = 0.05;
+static float timeCoeff = 0.05;
 
 float computeEV100FromAvgLuminance(float avgLuminance) {
 // We later use the middle gray at 12.7% in order to have
@@ -13,7 +13,7 @@ float computeEV100FromAvgLuminance(float avgLuminance) {
 // which is fixed at 12.5 for matching standard camera
 // constructor settings (i.e. calibration constant K = 12.5)
 // Reference : http :// en. wikipedia . org / wiki / Film_speed
-return log2 ( avgLuminance * 100.0f / 12.5f) ;
+return log2(avgLuminance * 100.0f / 12.5f);
 }
 
 float convertEV100ToExposure(float EV100) {
@@ -37,8 +37,6 @@ groupshared uint histogramShared[256];
 [numthreads(256, 1, 1)]
 void applyHistogramAverage(uint3 globalThreadId: SV_DispatchThreadID, uint localIndex: SV_GroupIndex) {
 
-    
-
     // Get the count from the histogram buffer
     uint countForThisBin = luminanceHistogramBuffer[localIndex];
     histogramShared[localIndex] = countForThisBin * localIndex;
@@ -59,20 +57,25 @@ void applyHistogramAverage(uint3 globalThreadId: SV_DispatchThreadID, uint local
     }
 
     if (localIndex == 0) {
-        
         float numPixels = (ap.game.renderSize.x * ap.game.renderSize.y);
 
         float weightedLogAverage = (histogramShared[0] / max(numPixels - float(countForThisBin), 1.0)) - 1.0;
 
         float weightedAvgLum = exp2(((weightedLogAverage / 254.0) * logLumRange) + minLogLum);
 
-        float lumLastFrame = mainTexture[int2(0, 0)].x;
-        float adaptedLum = lumLastFrame + (weightedAvgLum - lumLastFrame) * timeCoeff;
+        float lumLastFrame = exposureBuffer[0].x;
 
-        float computeEV100 = computeEV100FromAvgLuminance(adaptedLum);
+        float adaptedLum = (lumLastFrame + (weightedAvgLum - lumLastFrame) * timeCoeff);
+
+        float computeEV100 = 0.0;
+
+        if (ap.timing.frameCounter > 0) {
+            computeEV100 = computeEV100FromAvgLuminance(adaptedLum);
+        } else {
+            computeEV100 = computeEV100FromAvgLuminance(weightedAvgLum);
+        }
+
         float exposure = convertEV100ToExposure(computeEV100);
-
-        mainTexture.Store(int2(0, 0), float4(adaptedLum, 0.0, 0.0, 0.0));
 
         exposureBuffer[0] = float2(adaptedLum, exposure);
     }
