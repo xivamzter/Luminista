@@ -17,7 +17,7 @@ public class LuministaSettings implements PackSettings {
         screenShadow.option(
 			"SHADOW_RESOLUTION",
 			OptionType.intType(512, 4096, 512, 2048),
-			true
+			false
 		);
         screenShadow.option(
 			"SHADOW_DISTANCE",

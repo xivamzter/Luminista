@@ -4,13 +4,13 @@ import helpers.util;
 RWTexture2D mainTexture;
 RWStructuredBuffer<uint> luminanceHistogramBuffer;
 
+groupshared uint histogramShared[256];
+
 static const float EPSILON = 0.005;
 static const float3 RGB_TO_LUM = float3(0.2125, 0.7154, 0.0721);
 
 static const float minLogLum = -4;
 static const float2 u_params = float2(minLogLum, 1.0 / 28.0);
-
-groupshared uint histogramShared[256];
 
 // For a given color and luminance range, return the histogram bin index
 uint colorToBin(float3 hdrColor, float minLogLum, float inverseLogLumRange) {
@@ -39,10 +39,6 @@ void applyHistogram(uint3 globalThreadId: SV_DispatchThreadID, uint groupIndex: 
     histogramShared[groupIndex] = 0;
 
     GroupMemoryBarrierWithGroupSync();
-
-    uint width, height;
-    mainTexture.GetDimensions(width, height);
-    float2 dim = float2(width, height);
 
     if (all(globalThreadId.xy < ap.game.renderSize)) {
 

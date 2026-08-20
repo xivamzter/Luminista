@@ -3,6 +3,7 @@ import helpers.util;
 import settings;
 import lib.shadows;
 import lib.brdf;
+import lib.disneyBRDF;
 
 struct FragmentOutput {
     float4 color;
@@ -139,14 +140,14 @@ FragmentOutput applyLighting(float2 pos: SV_Position) {
 
     float debugBRDF = 0.0;
 
-    float3 sunLighting = earthShadowSun * brdf(sunDir, viewDir, color.rgb, reflectance, normals, roughness, SUN_ILLUMINANCE, debugBRDF);
-    float3 moonLighting = earthShadowMoon * brdf(moonDir, viewDir, color.rgb, reflectance, normals, roughness, MOON_ILLUMINANCE, debugBRDF);
+    float3 sunLighting = earthShadowSun * disneyBRDF(sunDir, viewDir, color.rgb, reflectance, normals, roughness, SUN_ILLUMINANCE, debugBRDF);
+    float3 moonLighting = earthShadowMoon * disneyBRDF(moonDir, viewDir, color.rgb, reflectance, normals, roughness, MOON_ILLUMINANCE, debugBRDF);
 
     float3 directLight = shadow * (sunLighting + moonLighting);
 
     float3 indirectLight = (skyLighting) * (ssao * vanillaAO * labAO);
 
-    color.rgb *= indirectLight + directLight;
+    color.rgb *= directLight + indirectLight;
 
     output.color = encodeColorRgbm16F(color.rgb);
     // output.color = float4(labNormal.rgb, 1.0);

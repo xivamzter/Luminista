@@ -78,7 +78,23 @@ LabConductorData getLabConductorData(in int conductor, in float3 albedo) {
     return data;
 }
 
-public float3 brdf(float3 l, float3 v, float3 albedo, float reflectance, float3 n, float roughness, float radiance, out float debug) {
+public float3 disneyDiffuse(float roughness, float lDotH, float nDotL, float nDotV) {
+    float FD90 = 0.5 + 2.0 * roughness * (lDotH * lDotH);
+    return (1.0 + (FD90 - 1.0) * pow(1.0 - nDotL, 5.0)) * (1.0 + (FD90 - 1.0) * pow(1.0 - nDotV, 5.0)); 
+}
+
+public float3 hammondDiffuse(float roughness, float nDotL, float nDotV, float nDotH, float lDotV, float3 albedo) {
+    float safenDotH = max(nDotH, 0.05);
+
+    float facing = 0.5 + 0.5 * lDotV;
+    float rough = facing * (0.9 - 0.4 * facing) * ((0.5 + safenDotH) / (safenDotH));
+    float smooth = 1.05 * (1.0 - pow(1.0 - nDotL, 5.0)) * (1.0 - pow(1.0 - nDotV, 5.0));
+    float single = (1.0 / PI) * lerp(smooth, rough, roughness);
+    float multi = 0.1159 * roughness;
+    return albedo * (single + albedo * multi);
+}
+
+public float3 disneyBRDF(float3 l, float3 v, float3 albedo, float reflectance, float3 n, float roughness, float radiance, out float debug) {
 
     float3 oL = float3(0.0);
 
@@ -88,11 +104,13 @@ public float3 brdf(float3 l, float3 v, float3 albedo, float reflectance, float3 
     float3 F = float3(0.00);
 
     float3 h = normalize(v + l);
-    float cosTheta = clamp(dot(v, h), 0.0, 1.0);
+    float cosTheta = saturate(dot(v, h));
 
-    float nDotH = clamp(dot(n, h), 0.0, 1.0);
-    float nDotV = clamp(dot(n, v), 0.0, 1.0);
-    float nDotL = clamp(dot(n, l), 0.0, 1.0);
+    float nDotH = saturate(dot(n, h));
+    float nDotV = saturate(dot(n, v));
+    float nDotL = saturate(dot(n, l));
+    float lDotH = saturate(dot(l, h));
+    float lDotV = saturate(dot(l, v));
 
     int conductor = int(round(reflectance * 255.0));
 
@@ -125,16 +143,22 @@ public float3 brdf(float3 l, float3 v, float3 albedo, float reflectance, float3 
     float G = geometrySmith(nDotV, nDotL, roughness);
 
     float3 kS = F;
+
+
     float3 kD = float3(1.0) - kS;
     kD *= 1.0 - metallic;
 
+    kD *= hammondDiffuse(roughness, nDotL, nDotV, nDotH, lDotV, albedo);
+    // kD *= (albedo / PI) * disneyDiffuse(roughness, lDotH, nDotL, nDotV);
+
     float3 nom = D * F * G;
     float denom = 4.0 * nDotL * nDotV + 1e-5;
+
     float3 specular = nom / denom;
 
     // add to outgoing radiance oL
     
-    oL += (kD * albedo / PI) * radiance * nDotL;
+    oL += (kD + specular) * radiance * nDotL;
 
     return oL;
 }

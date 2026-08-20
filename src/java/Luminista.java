@@ -21,8 +21,8 @@ public class Luminista implements ShaderPack {
         var skyTransmittanceTexture = pipeline.texture2D("skyTransmittanceTexture", TextureFormat.RGBA16_SFLOAT).size(screen.renderWidth() / 2, screen.renderHeight() / 2).create();
         var ambientScatteringTexture = pipeline.texture2D("ambientScatteringTexture", TextureFormat.RGBA16_SFLOAT).size(1, 1).create();
 
-        // Buffer luminanceHistogramBuffer = pipeline.buffer("luminanceHistogramBuffer", Integer.BYTES * 256);
-        // Buffer exposureBuffer = pipeline.buffer("exposureBuffer", Integer.BYTES * 256);
+        Buffer luminanceHistogramBuffer = pipeline.buffer("luminanceHistogramBuffer", Integer.BYTES * 256);
+        Buffer exposureBuffer = pipeline.buffer("exposureBuffer", Integer.BYTES * 256);
 
         if (pipeline.settings().getBoolValue("SHADOW_ENABLED"))
         pipeline.object(ProgramUsage.SHADOW, "object/shadow", "ShadowShader");
@@ -36,8 +36,10 @@ public class Luminista implements ShaderPack {
         pipeline.stage(ProgramStage.POST_RENDER).composite("ssao", "post/ssao", "ambientOcclusion").writes("lightmap", lightmapTexture);
         pipeline.stage(ProgramStage.POST_RENDER).composite("ambient", "post/ambient", "ambientSky").writes("ambientScattering", ambientScatteringTexture);
         pipeline.stage(ProgramStage.POST_RENDER).composite("lighting", "post/lighting", "applyLighting").writes("color", mainTexture);
-        // pipeline.stage(ProgramStage.POST_RENDER).compute("histogram", "compute/histogram", "applyHistogram").dispatch3D(Math.ceilDiv(screen.renderWidth(), 16), Math.ceilDiv(screen.renderHeight(), 8), 1);
-        // pipeline.stage(ProgramStage.POST_RENDER).compute("histogramAverage", "compute/histogramAverage", "applyHistogramAverage").dispatch3D(Math.ceilDiv(screen.renderWidth(), 16), Math.ceilDiv(screen.renderHeight(), 8), 1);
+
+        pipeline.stage(ProgramStage.POST_RENDER).compute("histogram", "compute/histogram", "applyHistogram").dispatch3D(Math.ceilDiv(screen.renderWidth(), 16), Math.ceilDiv(screen.renderHeight(), 8), 1); //Global histogram
+        pipeline.stage(ProgramStage.POST_RENDER).compute("histogramAverage", "compute/histogramAverage", "applyHistogramAverage").dispatch3D(Math.ceilDiv(screen.renderWidth(), 16), Math.ceilDiv(screen.renderHeight(), 8), 1); //Calculate average
+
         // pipeline.stage(ProgramStage.POST_RENDER).compute("exposure", "compute/exposureBlend", "applyExposure").dispatch3D(Math.ceilDiv(screen.renderWidth(), 16), Math.ceilDiv(screen.renderHeight(), 8), 1);
     }
 

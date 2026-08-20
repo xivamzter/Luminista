@@ -103,6 +103,7 @@ struct BasicShader : Shader<VertexOutput, FragmentOutput> {
         }
 
         float roughness = pow(1.0 - (labSpecular.r), 2.0);
+        // roughness = float(roughness / 255);
 
         ////////// OUTPUTS //////////
         output.color = color;
